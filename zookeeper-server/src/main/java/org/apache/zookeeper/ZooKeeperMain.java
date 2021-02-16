@@ -75,18 +75,17 @@ import org.apache.zookeeper.admin.ZooKeeperAdmin;
  */
 @InterfaceAudience.Public
 public class ZooKeeperMain {
-    private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperMain.class);
-    static final Map<String,String> commandMap = new HashMap<String,String>( );
-    static final Map<String,CliCommand> commandMapCli =
-            new HashMap<String,CliCommand>( );
+    private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperMain.class);//使用slf4j生成日志
+    static final Map<String,String> commandMap = new HashMap<String,String>( );//用来保存client命令的扩展选项，例如ls->[-s] [-w] [-R] path
+    static final Map<String,CliCommand> commandMapCli = new HashMap<String,CliCommand>( );
 
-    protected MyCommandOptions cl = new MyCommandOptions();
+    protected MyCommandOptions cl = new MyCommandOptions();//保存命令行options和shell命令的类
     protected HashMap<Integer,String> history = new HashMap<Integer,String>( );
     protected int commandCount = 0;
-    protected boolean printWatches = true;
+    protected boolean printWatches = true;//默认设置，是否打印watcher
     protected int exitCode = 0;
 
-    protected ZooKeeper zk;
+    protected ZooKeeper zk;//Zookeeper类
     protected String host = "";
 
     public boolean getPrintWatches( ) {
@@ -128,10 +127,10 @@ public class ZooKeeperMain {
     }
     }
 
-    static void usage() {
+    static void usage() {//在client输入命令错误时，打印提示信息
         System.err.println("ZooKeeper -server host:port cmd args");
         List<String> cmdList = new ArrayList<String>(commandMap.keySet());
-        Collections.sort(cmdList);
+        Collections.sort(cmdList);//按照命令字符串字典排序；
         for (String cmd : cmdList) {
             System.err.println("\t"+cmd+ " " + commandMap.get(cmd));
         }
@@ -139,9 +138,9 @@ public class ZooKeeperMain {
 
     private class MyWatcher implements Watcher {
         public void process(WatchedEvent event) {
-            if (getPrintWatches()) {
-                ZooKeeperMain.printMessage("WATCHER::");
-                ZooKeeperMain.printMessage(event.toString());
+            if (getPrintWatches()) {//如果设置了printWatcher on，打印watcher
+                ZooKeeperMain.printMessage("WATCHER::");//直接在命令上输出WATCHER:
+                ZooKeeperMain.printMessage(event.toString());//打印event信息
             }
         }
     }
@@ -150,7 +149,7 @@ public class ZooKeeperMain {
      * A storage class for both command line options and shell commands.
      *
      */
-    static class MyCommandOptions {
+    static class MyCommandOptions {//保存命令行options和shell命令的类
 
         private Map<String,String> options = new HashMap<String,String>();
         private List<String> cmdArgs = null;
@@ -159,8 +158,8 @@ public class ZooKeeperMain {
         public static final Pattern QUOTED_PATTERN = Pattern.compile("^([\'\"])(.*)(\\1)$");
 
         public MyCommandOptions() {
-          options.put("server", "localhost:2181");
-          options.put("timeout", "30000");
+          options.put("server", "localhost:2181");//默认选项，连接server：localhost：2181
+          options.put("timeout", "30000");//默认选项，超时时间30s
         }
 
         public String getOption(String opt) {
@@ -252,29 +251,29 @@ public class ZooKeeperMain {
     /**
      * Makes a list of possible completions, either for commands
      * or for zk nodes if the token to complete begins with /
-     *
+     * 将可能的自动补全的命令做一个列表，用于命令补全、zk node
      */
 
 
-    protected void addToHistory(int i,String cmd) {
+    protected void addToHistory(int i,String cmd) {//记录历史命令
         history.put(i, cmd);
     }
 
-    public static List<String> getCommands() {
+    public static List<String> getCommands() {//获取zk的命令列表，用于自动补全
         List<String> cmdList = new ArrayList<String>(commandMap.keySet());
         Collections.sort(cmdList);
         return cmdList;
     }
 
-    protected String getPrompt() {       
+    protected String getPrompt() {//获取命令提示
         return "[zk: " + host + "("+zk.getState()+")" + " " + commandCount + "] ";
     }
 
-    public static void printMessage(String msg) {
+    public static void printMessage(String msg) {//在client客户端打印消息
         System.out.println("\n"+msg);
     }
 
-    protected void connectToZK(String newHost) throws InterruptedException, IOException {
+    protected void connectToZK(String newHost) throws InterruptedException, IOException {//连接到指定的zk server
         if (zk != null && zk.getState().isAlive()) {
             zk.close();
         }
@@ -285,6 +284,7 @@ public class ZooKeeperMain {
             System.setProperty(ZKClientConfig.SECURE_CLIENT, "true");
             System.out.println("Secure connection is enabled");
         }
+        //Zookeeper客户端操作入口，初始化Zookeeper
         zk = new ZooKeeperAdmin(host, Integer.parseInt(cl.getOption("timeout")), new MyWatcher(), readOnly);
     }
 
@@ -294,16 +294,16 @@ public class ZooKeeperMain {
     }
 
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
-        cl.parseOptions(args);
+        cl.parseOptions(args);//解析命令行配置options
         System.out.println("Connecting to " + cl.getOption("server"));
-        connectToZK(cl.getOption("server"));
+        connectToZK(cl.getOption("server"));//连接到指定的server
     }
 
     public ZooKeeperMain(ZooKeeper zk) {
       this.zk = zk;
     }
 
-    void run() throws IOException, InterruptedException {
+    void run() throws IOException, InterruptedException {//客户端zkCli的执行核心方法
         if (cl.getCommand() == null) {
             System.out.println("Welcome to ZooKeeper!");
 
@@ -327,8 +327,8 @@ public class ZooKeeperMain {
 
                 String line;
                 Method readLine = consoleC.getMethod("readLine", String.class);
-                while ((line = (String)readLine.invoke(console, getPrompt())) != null) {
-                    executeLine(line);
+                while ((line = (String)readLine.invoke(console, getPrompt())) != null) {//获取terminal中输入命令行
+                    executeLine(line);//执行输入的命令行
                 }
             } catch (ClassNotFoundException e) {
                 LOG.debug("Unable to start jline", e);
@@ -596,16 +596,16 @@ public class ZooKeeperMain {
     protected boolean processZKCmd(MyCommandOptions co) throws CliException, IOException, InterruptedException {
         String[] args = co.getArgArray();
         String cmd = co.getCommand();
-        if (args.length < 1) {
+        if (args.length < 1) {//输入命令不含有参数，报错
             usage();
             throw new MalformedCommandException("No command entered");
         }
 
-        if (!commandMap.containsKey(cmd)) {
+        if (!commandMap.containsKey(cmd)) {//未找到相关明星，报错，打印错误
             usage();
             throw new CommandNotFoundException("Command not found " + cmd);
         }
-        
+        //tip: 命令行输入help是因为错误才打印使用说明，不是help命令的作用
         boolean watch = false;
         LOG.debug("Processing " + cmd);
 

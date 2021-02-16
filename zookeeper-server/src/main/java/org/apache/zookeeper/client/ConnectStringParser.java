@@ -28,6 +28,7 @@ import static org.apache.zookeeper.common.StringUtils.split;
 
 /**
  * A parser for ZooKeeper Client connect strings.
+ *Zookeeper客户端连接字符串的解析器
  * 
  * This class is not meant to be seen or used outside of ZooKeeper itself.
  * 

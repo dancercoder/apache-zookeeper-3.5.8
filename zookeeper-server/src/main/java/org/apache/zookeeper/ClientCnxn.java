@@ -97,6 +97,9 @@ import org.slf4j.MDC;
  * of available servers to connect to and "transparently" switches servers it is
  * connected to as needed.
  *
+ * ClientCnxn用于管理客户端的socket io
+ * 维护可用的server的列表，对客户端透明底切换server
+ *
  */
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 public class ClientCnxn {
@@ -110,7 +113,7 @@ public class ClientCnxn {
      * controls the size of each call. It is set to 128kB to be conservative
      * with respect to the server's 1MB default for jute.maxBuffer.
      */
-    private static final int SET_WATCHES_MAX_LENGTH = 128 * 1024;
+    private static final int SET_WATCHES_MAX_LENGTH = 128 * 1024;//一个session允许的最多的watcher的数量128k个
 
     static class AuthData {
         AuthData(String scheme, byte data[]) {
@@ -244,6 +247,7 @@ public class ClientCnxn {
 
     /**
      * This class allows us to pass the headers and the relevant records around.
+     * 这个类允许我们绕过headers和相关的记录
      */
     static class Packet {
         RequestHeader requestHeader;
@@ -395,12 +399,12 @@ public class ClientCnxn {
         this.hostProvider = hostProvider;
         this.chrootPath = chrootPath;
 
-        connectTimeout = sessionTimeout / hostProvider.size();
+        connectTimeout = sessionTimeout / hostProvider.size();//connectionTimeout是sessionTimeout与服务器列表长度的商
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
-        sendThread = new SendThread(clientCnxnSocket);
-        eventThread = new EventThread();
+        sendThread = new SendThread(clientCnxnSocket);//发送线程
+        eventThread = new EventThread();//监听线程
         this.clientConfig=zooKeeper.getClientConfig();
         initRequestTimeout();
     }
@@ -433,6 +437,7 @@ public class ClientCnxn {
         return name + suffix;
     }
 
+    //事件监听线程
     class EventThread extends ZooKeeperThread {
         private final LinkedBlockingQueue<Object> waitingEvents =
             new LinkedBlockingQueue<Object>();
@@ -499,7 +504,7 @@ public class ClientCnxn {
 
         @Override
         @SuppressFBWarnings("JLM_JSR166_UTILCONCURRENT_MONITORENTER")
-        public void run() {
+        public void run() {//Event线程工作机制
            try {
               isRunning = true;
               while (true) {
@@ -801,6 +806,7 @@ public class ClientCnxn {
     /**
      * This class services the outgoing request queue and generates the heart
      * beats. It also spawns the ReadThread.
+     * SendThread处理向外发送的请求，并产生心跳，也产生ReadThread
      */
     class SendThread extends ZooKeeperThread {
         private long lastPingSentNs;
@@ -1115,7 +1121,7 @@ public class ClientCnxn {
         private static final String RETRY_CONN_MSG =
             ", closing socket connection and attempting reconnect";
         @Override
-        public void run() {
+        public void run() {//Send线程工作机制
             clientCnxnSocket.introduce(this, sessionId, outgoingQueue);
             clientCnxnSocket.updateNow();
             clientCnxnSocket.updateLastSendAndHeard();

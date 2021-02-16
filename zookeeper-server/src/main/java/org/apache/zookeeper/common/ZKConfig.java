@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * {@link #setProperty(String, String)}.
  * @since 3.5.2
  */
-public class ZKConfig {
+public class ZKConfig {//client和server端配置的基类，支持从系统properties、配置文件读取客户端配置；用户可以调用setProperty覆盖系统property设置的配置项
 
     private static final Logger LOG = LoggerFactory.getLogger(ZKConfig.class);
 

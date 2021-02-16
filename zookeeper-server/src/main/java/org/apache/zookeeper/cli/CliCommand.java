@@ -24,7 +24,7 @@ import org.apache.zookeeper.ZooKeeper;
 /**
  * base class for all CLI commands
  */
-abstract public class CliCommand {
+abstract public class CliCommand {//客户端命令基类
     protected ZooKeeper zk;
     protected PrintStream out;
     protected PrintStream err;
@@ -113,5 +113,5 @@ abstract public class CliCommand {
      * @return
      * @throws CliException
      */
-    abstract public boolean exec() throws CliException;
+    abstract public boolean exec() throws CliException;//客户端命令的具体执行
 }

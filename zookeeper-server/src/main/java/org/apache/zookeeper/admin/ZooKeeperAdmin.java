@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 // See ZooKeeper.java for an explanation of why we need @SuppressWarnings("try")
 @SuppressWarnings("try")
 @InterfaceAudience.Public
-public class ZooKeeperAdmin extends ZooKeeper {
+public class ZooKeeperAdmin extends ZooKeeper {//用来执行cluster管理任务，跟Zookeeper类有相似的用法，可以参考Zookeeper的使用文档
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperAdmin.class);
 
     /**

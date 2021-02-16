@@ -259,7 +259,7 @@ public class ZooKeeper implements AutoCloseable {
      * the public methods will not be exposed as part of the ZooKeeper client
      * API.
      */
-    static class ZKWatchManager implements ClientWatchManager {
+    static class ZKWatchManager implements ClientWatchManager {//ZKWatcherManager管理wacher，处理ClientCnxn产生的event
         private final Map<String, Set<Watcher>> dataWatches =
             new HashMap<String, Set<Watcher>>();
         private final Map<String, Set<Watcher>> existWatches =
@@ -682,7 +682,7 @@ public class ZooKeeper implements AutoCloseable {
      * @throws IllegalArgumentException
      *             if an invalid chroot path is specified
      */
-    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)//最简参数使用zookeeper
         throws IOException
     {
         this(connectString, sessionTimeout, watcher, false);
@@ -865,6 +865,9 @@ public class ZooKeeper implements AutoCloseable {
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
             boolean canBeReadOnly, HostProvider aHostProvider,
             ZKClientConfig clientConfig) throws IOException {
+        /**
+         * Zookeeper创建
+         */
         LOG.info("Initiating client connection, connectString=" + connectString
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
 
@@ -877,13 +880,30 @@ public class ZooKeeper implements AutoCloseable {
         ConnectStringParser connectStringParser = new ConnectStringParser(
                 connectString);
         hostProvider = aHostProvider;
-
+        //创建ClientCnxn对象
         cnxn = createConnection(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
                 getClientCnxnSocket(), canBeReadOnly);
         cnxn.start();
     }
 
+    /**
+     * 创建ZOokeeper连接
+     * 重点是ClientCnxn cnxn的创建
+     */
+
+     /**
+     *
+     * @param chrootPath
+     * @param hostProvider
+     * @param sessionTimeout
+     * @param zooKeeper
+     * @param watcher
+     * @param clientCnxnSocket
+     * @param canBeReadOnly
+     * @return
+     * @throws IOException
+     */
     // @VisibleForTesting
     protected ClientCnxn createConnection(String chrootPath,
             HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
@@ -950,6 +970,11 @@ public class ZooKeeper implements AutoCloseable {
         this(connectString, sessionTimeout, watcher, canBeReadOnly,
                 createDefaultHostProvider(connectString));
     }
+    /**
+     * connectString是多个server地址，使用,拼接
+     * session会话的创建时异步的，构造函数仅仅初始化连接，就立即返回
+     * watcher用于通知连接状态的变化
+     */
 
     /**
      * To create a ZooKeeper client object, the application needs to pass a
@@ -1412,7 +1437,7 @@ public class ZooKeeper implements AutoCloseable {
         }
 
         try {
-            cnxn.close();
+            cnxn.close();//关闭ClientCnxn
         } catch (IOException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Ignoring unexpected exception during close", e);
@@ -3055,7 +3080,7 @@ public class ZooKeeper implements AutoCloseable {
 
     private ClientCnxnSocket getClientCnxnSocket() throws IOException {
         String clientCnxnSocketName = getClientConfig().getProperty(
-                ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET);
+                ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET);//如果clientConfig中指定了zookeeper.clientCnxnSocket，则使用指定的类作为客户端Socket
         if (clientCnxnSocketName == null) {
             clientCnxnSocketName = ClientCnxnSocketNIO.class.getName();
         }

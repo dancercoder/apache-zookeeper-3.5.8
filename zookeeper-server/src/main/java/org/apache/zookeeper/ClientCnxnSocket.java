@@ -40,9 +40,11 @@ import org.slf4j.LoggerFactory;
 /**
  * A ClientCnxnSocket does the lower level communication with a socket
  * implementation.
+ * ClientCnxnSocket实现底层socket通信基本功能
  * 
  * This code has been moved out of ClientCnxn so that a Netty implementation can
  * be provided as an alternative to the NIO socket code.
+ * Netty实现可以提供一种NIO Socket的可选方案
  * 
  */
 abstract class ClientCnxnSocket {
@@ -52,6 +54,7 @@ abstract class ClientCnxnSocket {
 
     /**
      * This buffer is only used to read the length of the incoming message.
+     * 只用作读取接收消息的长度
      */
     protected final ByteBuffer lenBuffer = ByteBuffer.allocateDirect(4);
 
@@ -68,7 +71,7 @@ abstract class ClientCnxnSocket {
     protected ClientCnxn.SendThread sendThread;
     protected LinkedBlockingDeque<Packet> outgoingQueue;
     protected ZKClientConfig clientConfig;
-    private int packetLen = ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT;
+    private int packetLen = ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT;//4M
 
     /**
      * The sessionId is only available here for Log and Exception messages.
