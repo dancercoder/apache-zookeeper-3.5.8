@@ -624,6 +624,16 @@ public class ZooKeeper implements AutoCloseable {
     public enum States {
         CONNECTING, ASSOCIATING, CONNECTED, CONNECTEDREADONLY,
         CLOSED, AUTH_FAILED, NOT_CONNECTED;
+        //Zookeeper定义的状态，初始状态是CONNECTING
+        /*
+        CONNECTING-连接中
+        ASSOCIATING-
+        CONNECTED-已连接
+        CONNECTEDREADONLY-只读连接
+        CLOSED-已关闭
+        AUTH_FAILED-授权失败
+        NOT_CONNECTED-未连接
+         */
 
         public boolean isAlive() {
             return this != CLOSED && this != AUTH_FAILED;
@@ -864,7 +874,7 @@ public class ZooKeeper implements AutoCloseable {
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
             boolean canBeReadOnly, HostProvider aHostProvider,
-            ZKClientConfig clientConfig) throws IOException {
+            ZKClientConfig clientConfig) throws IOException {//【分析入口5】Zookeeper最终实例化方法
         /**
          * Zookeeper创建
          */
@@ -881,6 +891,7 @@ public class ZooKeeper implements AutoCloseable {
                 connectString);
         hostProvider = aHostProvider;
         //创建ClientCnxn对象
+        //connectStringParser.getChrootPath()允许在connectionString后面添加路径，修改当前会话的顶目录
         cnxn = createConnection(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
                 getClientCnxnSocket(), canBeReadOnly);
@@ -1238,6 +1249,7 @@ public class ZooKeeper implements AutoCloseable {
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
     		long sessionId, byte[] sessionPasswd, boolean canBeReadOnly,
     		HostProvider aHostProvider, ZKClientConfig clientConfig) throws IOException {
+        //【分析入口6】Zookeeper最终实例化方法，带密码校验
     	LOG.info("Initiating client connection, connectString=" + connectString
     			+ " sessionTimeout=" + sessionTimeout
     			+ " watcher=" + watcher
@@ -1332,6 +1344,7 @@ public class ZooKeeper implements AutoCloseable {
     }
 
     // default hostprovider
+    //默认使用StaticHostProvider
     private static HostProvider createDefaultHostProvider(String connectString) {
         return new StaticHostProvider(
                 new ConnectStringParser(connectString).getServerAddresses());

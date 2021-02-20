@@ -136,7 +136,7 @@ public class ZooKeeperMain {
         }
     }
 
-    private class MyWatcher implements Watcher {
+    private class MyWatcher implements Watcher {//命令行Watcher的处理逻辑：在命令行打印
         public void process(WatchedEvent event) {
             if (getPrintWatches()) {//如果设置了printWatcher on，打印watcher
                 ZooKeeperMain.printMessage("WATCHER::");//直接在命令上输出WATCHER:
@@ -226,7 +226,7 @@ public class ZooKeeperMain {
          * @param cmdstring string of form "cmd arg1 arg2..etc"
          * @return true if parsing succeeded.
          */
-        public boolean parseCommand( String cmdstring ) {
+        public boolean parseCommand( String cmdstring ) {//转换字符串为"命令+参数"
             Matcher matcher = ARGS_PATTERN.matcher(cmdstring);
 
             List<String> args = new LinkedList<String>();
@@ -284,8 +284,8 @@ public class ZooKeeperMain {
             System.setProperty(ZKClientConfig.SECURE_CLIENT, "true");
             System.out.println("Secure connection is enabled");
         }
-        //Zookeeper客户端操作入口，初始化Zookeeper
-        zk = new ZooKeeperAdmin(host, Integer.parseInt(cl.getOption("timeout")), new MyWatcher(), readOnly);
+        //Zookeeper客户端操作入口，初始化zk
+        zk = new ZooKeeperAdmin(host, Integer.parseInt(cl.getOption("timeout")), new MyWatcher(), readOnly);//MyWatcher作为默认的watcher
     }
 
     public static void main(String args[]) throws IOException, InterruptedException {
@@ -296,7 +296,7 @@ public class ZooKeeperMain {
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
         cl.parseOptions(args);//解析命令行配置options
         System.out.println("Connecting to " + cl.getOption("server"));
-        connectToZK(cl.getOption("server"));//连接到指定的server
+        connectToZK(cl.getOption("server"));//连接到指定的server【分析入口1】获得zk实例
     }
 
     public ZooKeeperMain(ZooKeeper zk) {
@@ -304,7 +304,7 @@ public class ZooKeeperMain {
     }
 
     void run() throws IOException, InterruptedException {//客户端zkCli的执行核心方法
-        if (cl.getCommand() == null) {
+        if (cl.getCommand() == null) {//没有从zkCli命令行输入命令
             System.out.println("Welcome to ZooKeeper!");
 
             boolean jlinemissing = false;
@@ -328,7 +328,7 @@ public class ZooKeeperMain {
                 String line;
                 Method readLine = consoleC.getMethod("readLine", String.class);
                 while ((line = (String)readLine.invoke(console, getPrompt())) != null) {//获取terminal中输入命令行
-                    executeLine(line);//执行输入的命令行
+                    executeLine(line);//执行输入的命令行【分析入口3】
                 }
             } catch (ClassNotFoundException e) {
                 LOG.debug("Unable to start jline", e);
@@ -347,18 +347,19 @@ public class ZooKeeperMain {
                 jlinemissing = true;
             }
 
-            if (jlinemissing) {
+            if (jlinemissing) {//如果不能正常加载JLineZNodeCompleter
                 System.out.println("JLine support is disabled");
                 BufferedReader br =
                     new BufferedReader(new InputStreamReader(System.in));
 
                 String line;
                 while ((line = br.readLine()) != null) {
-                    executeLine(line);
+                    executeLine(line);//【分析入口2】与入口1相同，只是从系统标准输入直接获取字符串
                 }
             }
         } else {
             // Command line args non-null.  Run what was passed.
+            //如果zkCli命令行直接放了命令，则执行后退出，没有while循环
             processCmd(cl);
         }
         System.exit(exitCode);
@@ -366,9 +367,9 @@ public class ZooKeeperMain {
 
     public void executeLine(String line) throws InterruptedException, IOException {
       if (!line.equals("")) {
-        cl.parseCommand(line);
-        addToHistory(commandCount,line);
-        processCmd(cl);
+        cl.parseCommand(line);//cl记录了当前命令，将字符串转换成"命令+参数"
+        addToHistory(commandCount,line);//添加命令执行历史
+        processCmd(cl);//执行命令【分析入口3-1】
         commandCount++;
       }
     }
@@ -584,7 +585,7 @@ public class ZooKeeperMain {
     protected boolean processCmd(MyCommandOptions co) throws IOException, InterruptedException {
         boolean watch = false;
         try {
-            watch = processZKCmd(co);
+            watch = processZKCmd(co);//执行命令【分析入口3-1-1】
             exitCode = 0;
         } catch (CliException ex) {
             exitCode = ex.getExitCode();
@@ -593,6 +594,7 @@ public class ZooKeeperMain {
         return watch;
     }
 
+    //与@Method processCmd相互调用
     protected boolean processZKCmd(MyCommandOptions co) throws CliException, IOException, InterruptedException {
         String[] args = co.getArgArray();
         String cmd = co.getCommand();
@@ -601,7 +603,7 @@ public class ZooKeeperMain {
             throw new MalformedCommandException("No command entered");
         }
 
-        if (!commandMap.containsKey(cmd)) {//未找到相关明星，报错，打印错误
+        if (!commandMap.containsKey(cmd)) {//未找到相关命令，报错，打印错误
             usage();
             throw new CommandNotFoundException("Command not found " + cmd);
         }
@@ -610,7 +612,7 @@ public class ZooKeeperMain {
         LOG.debug("Processing " + cmd);
 
 
-        if (cmd.equals("quit")) {
+        if (cmd.equals("quit")) {//输入quit，关闭zk，直接退出
             zk.close();
             System.exit(exitCode);
         } else if (cmd.equals("redo") && args.length >= 2) {
@@ -619,12 +621,12 @@ public class ZooKeeperMain {
                 throw new MalformedCommandException("Command index out of range");
             }
             cl.parseCommand(history.get(i));
-            if (cl.getCommand().equals("redo")) {
+            if (cl.getCommand().equals("redo")) {//不允许redo嵌套
                 throw new MalformedCommandException("No redoing redos");
             }
             history.put(commandCount, history.get(i));
-            processCmd(cl);
-        } else if (cmd.equals("history")) {
+            processCmd(cl);//redo执行历史命令
+        } else if (cmd.equals("history")) {//打印最近的10条命令
             for (int i = commandCount - 10; i <= commandCount; ++i) {
                 if (i < 0) continue;
                 System.out.println(i + " - " + history.get(i));
@@ -633,27 +635,28 @@ public class ZooKeeperMain {
             if (args.length == 1) {
                 System.out.println("printwatches is " + (printWatches ? "on" : "off"));
             } else {
-                printWatches = args[1].equals("on");
+                printWatches = args[1].equals("on");//设置打开pringwatches
             }
         } else if (cmd.equals("connect")) {
             if (args.length >= 2) {
                 connectToZK(args[1]);
             } else {
-                connectToZK(host);
+                connectToZK(host);//连接到host，更新zk和host
             }
         }
         
         // Below commands all need a live connection
+        // 下面的命令需要alive的连接，开始处理zk命令
         if (zk == null || !zk.getState().isAlive()) {
             System.out.println("Not connected");
             return false;
         }
         
         // execute from commandMap
-        CliCommand cliCmd = commandMapCli.get(cmd);
+        CliCommand cliCmd = commandMapCli.get(cmd);//转换成预设命令
         if(cliCmd != null) {
             cliCmd.setZk(zk);
-            watch = cliCmd.parse(args).exec();
+            watch = cliCmd.parse(args).exec();//执行ZK命令执行命令【分析入口3-1-1-1】
         } else if (!commandMap.containsKey(cmd)) {
              usage();
         }

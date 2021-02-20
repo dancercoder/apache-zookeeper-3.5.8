@@ -66,38 +66,38 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws IOException
      */
     void doIO(List<Packet> pendingQueue, ClientCnxn cnxn)
-      throws InterruptedException, IOException {
+      throws InterruptedException, IOException {//执行io读写操作
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
-        if (sockKey.isReadable()) {
-            int rc = sock.read(incomingBuffer);
-            if (rc < 0) {
+        if (sockKey.isReadable()) {//检查是否设置了"可读"监听
+            int rc = sock.read(incomingBuffer);//读数据到incomingBuffer中，数据最终还是从sockChannel中获取
+            if (rc < 0) {//readCount表示读回的数据长度
                 throw new EndOfStreamException(
                         "Unable to read additional data from server sessionid 0x"
                                 + Long.toHexString(sessionId)
                                 + ", likely server has closed socket");
             }
-            if (!incomingBuffer.hasRemaining()) {
-                incomingBuffer.flip();
+            if (!incomingBuffer.hasRemaining()) {//position==limit标识已经全部读完
+                incomingBuffer.flip();//准备从incomingBuffer中读出数据limit=position；position=0，mark=-1，是读之前的准备
                 if (incomingBuffer == lenBuffer) {
-                    recvCount.getAndIncrement();
-                    readLength();
-                } else if (!initialized) {
+                    recvCount.getAndIncrement();//记录读操作次数
+                    readLength();//读取数据长度，然后分配响应的Buffer
+                } else if (!initialized) {//若未初始化，读取连接结果
                     readConnectResult();
-                    enableRead();
+                    enableRead();//开启OP_READ监听
                     if (findSendablePacket(outgoingQueue,
-                            sendThread.tunnelAuthInProgress()) != null) {
+                            sendThread.tunnelAuthInProgress()) != null) {//第一个待发送的packet存在
                         // Since SASL authentication has completed (if client is configured to do so),
                         // outgoing packets waiting in the outgoingQueue can now be sent.
-                        enableWrite();
+                        enableWrite();//监听"可写"状态，将outgoingQueue中的数据发出去
                     }
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;
                     updateLastHeard();
                     initialized = true;
-                } else {
+                } else {//不是响应的长度，而是响应的内容
                     sendThread.readResponse(incomingBuffer);
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;
@@ -105,7 +105,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
         }
-        if (sockKey.isWritable()) {
+        if (sockKey.isWritable()) {//如果开启"可写"监听
             Packet p = findSendablePacket(outgoingQueue,
                     sendThread.tunnelAuthInProgress());
 
@@ -120,14 +120,14 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     }
                     p.createBB();
                 }
-                sock.write(p.bb);
-                if (!p.bb.hasRemaining()) {
+                sock.write(p.bb);//与server最终通信的数据流，使用packet的ByteBuffer
+                if (!p.bb.hasRemaining()) {//标识已经发送完毕
                     sentCount.getAndIncrement();
                     outgoingQueue.removeFirstOccurrence(p);
                     if (p.requestHeader != null
                             && p.requestHeader.getType() != OpCode.ping
                             && p.requestHeader.getType() != OpCode.auth) {
-                        synchronized (pendingQueue) {
+                        synchronized (pendingQueue) {//pendingQueue非线程安全类
                             pendingQueue.add(p);
                         }
                     }
@@ -139,7 +139,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 // from within ZooKeeperSaslClient (if client is configured
                 // to attempt SASL authentication), or in either doIO() or
                 // in doTransport() if not.
-                disableWrite();
+                disableWrite();//待发送队列为空，关闭可写监听
             } else if (!initialized && p != null && !p.bb.hasRemaining()) {
                 // On initial connection, write the complete connect request
                 // packet, but then disable further writes until after
@@ -175,7 +175,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         Iterator<Packet> iter = outgoingQueue.iterator();
         while (iter.hasNext()) {
             Packet p = iter.next();
-            if (p.requestHeader == null) {
+            if (p.requestHeader == null) {//找到the priming-packet，移动到第一个
                 // We've found the priming-packet. Move it to the beginning of the queue.
                 iter.remove();
                 outgoingQueue.addFirst(p);
@@ -190,19 +190,19 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
 
     @Override
-    void cleanup() {
+    void cleanup() {//关闭或重新连接之前清理资源
         if (sockKey != null) {
             SocketChannel sock = (SocketChannel) sockKey.channel();
-            sockKey.cancel();
+            sockKey.cancel();//取消SelectionKey
             try {
-                sock.socket().shutdownInput();
+                sock.socket().shutdownInput();//停止socket stream，之后所有的写入会被通知不能写入然后丢弃，所有的读都返回0（stream的结尾时// -1）
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Ignoring exception during shutdown input", e);
                 }
             }
             try {
-                sock.socket().shutdownOutput();
+                sock.socket().shutdownOutput();//todo 为啥搞了两次？
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Ignoring exception during shutdown output",
@@ -210,7 +210,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
             try {
-                sock.socket().close();
+                sock.socket().close();//关闭socket，所有阻塞在socket io上的进程都会抛出SocketException
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Ignoring exception during socket close", e);
@@ -271,8 +271,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      */
     void registerAndConnect(SocketChannel sock, InetSocketAddress addr) 
     throws IOException {
-        sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
-        boolean immediateConnect = sock.connect(addr);
+        sockKey = sock.register(selector, SelectionKey.OP_CONNECT);//注册多路复用监听
+        boolean immediateConnect = sock.connect(addr);//如果连接建立返回true，如果是non-blocking状态，并且正在连接，返回false
         if (immediateConnect) {
             sendThread.primeConnection();
         }
@@ -280,7 +280,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     
     @Override
     void connect(InetSocketAddress addr) throws IOException {
-        SocketChannel sock = createSock();
+        SocketChannel sock = createSock();//创建NIO
         try {
            registerAndConnect(sock, addr);
       } catch (IOException e) {
@@ -336,13 +336,13 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
 
     private synchronized void wakeupCnxn() {
-        selector.wakeup();
+        selector.wakeup();//导致selector的select()立即返回
     }
     
     @Override
     void doTransport(int waitTimeOut, List<Packet> pendingQueue, ClientCnxn cnxn)
             throws IOException, InterruptedException {
-        selector.select(waitTimeOut);
+        selector.select(waitTimeOut);//使用多路复用机制
         Set<SelectionKey> selected;
         synchronized (this) {
             selected = selector.selectedKeys();
@@ -350,7 +350,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         // Everything below and until we get back to the select is
         // non blocking, so time is effectively a constant. That is
         // Why we just have to do this once, here
-        updateNow();
+        updateNow(); //下面所有的操作-到重新调用select()截止，都是非阻塞的，所以time基本上是常数，所以只需要更新一次now
         for (SelectionKey k : selected) {
             SocketChannel sc = ((SocketChannel) k.channel());
             if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {

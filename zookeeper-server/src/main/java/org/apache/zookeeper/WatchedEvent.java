@@ -27,6 +27,8 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
  *  is able to respond to.  The WatchedEvent includes exactly what happened,
  *  the current state of the ZooKeeper, and the path of the znode that
  *  was involved in the event.
+ *  WatcherEvent是Zookeeper中可以被Watcher响应的change
+ *  WatcherEvent准确地表达发生了什么、Zookeeper的当前状态、event中涉及的znode的路径
  */
 @InterfaceAudience.Public
 public class WatchedEvent {

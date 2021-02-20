@@ -82,7 +82,7 @@ public class GetCommand extends CliCommand {
         Stat stat = new Stat();
         byte data[];
         try {
-            data = zk.getData(path, watch, stat);
+            data = zk.getData(path, watch, stat);//get命令的实现，命令的执行【分析入口4】
         } catch (IllegalArgumentException ex) {
             throw new MalformedPathException(ex.getMessage());
         } catch (KeeperException|InterruptedException ex) {

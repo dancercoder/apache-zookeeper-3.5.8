@@ -32,7 +32,7 @@ public class ZooDefs {
    final public static String CONFIG_NODE = "/zookeeper/config";
 
    @InterfaceAudience.Public
-    public interface OpCode {
+    public interface OpCode {//命令操作码 header=11标识ping
         public final int notification = 0;
 
         public final int create = 1;

@@ -128,17 +128,17 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     }
 
     @Override
-    void connect(InetSocketAddress addr) throws IOException {
+    void connect(InetSocketAddress addr) throws IOException {//Netty连接到指定ip：port
         firstConnect = new CountDownLatch(1);
 
-        Bootstrap bootstrap = new Bootstrap()
-                .group(eventLoopGroup)
+        Bootstrap bootstrap = new Bootstrap()//创建客户端Bootstrap
+                .group(eventLoopGroup)//客户端eventLoop使用单线程group
                 .channel(NettyUtils.nioOrEpollSocketChannel())
                 .option(ChannelOption.SO_LINGER, -1)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .handler(new ZKClientPipelineFactory(addr.getHostString(), addr.getPort()));
         bootstrap = configureBootstrapAllocator(bootstrap);
-        bootstrap.validate();
+        bootstrap.validate();//验证bootstrap
 
         connectLock.lock();
         try {
@@ -280,7 +280,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
             // check if being waken up on closing.
             if (!sendThread.getZkState().isAlive()) {
                 // adding back the packet to notify of failure in conLossPacket().
-                addBack(head);
+                addBack(head);//不处理，放回原处
                 return;
             }
             // channel disconnection happened
@@ -294,6 +294,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
                 doWrite(pendingQueue, head, cnxn);
             }
         } finally {
+            updateNow();
             updateNow();
         }
     }
@@ -356,7 +357,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
         updateNow();
         boolean anyPacketsSent = false;
         while (true) {
-            if (p != WakeupPacket.getInstance()) {
+            if (p != WakeupPacket.getInstance()) {//如果不是wakeup packet
                 if ((p.requestHeader != null) &&
                         (p.requestHeader.getType() != ZooDefs.OpCode.ping) &&
                         (p.requestHeader.getType() != ZooDefs.OpCode.auth)) {
@@ -365,13 +366,13 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
                         pendingQueue.add(p);
                     }
                 }
-                sendPktOnly(p);
+                sendPktOnly(p);//channel中写入数据
                 anyPacketsSent = true;
             }
             if (outgoingQueue.isEmpty()) {
                 break;
             }
-            p = outgoingQueue.remove();
+            p = outgoingQueue.remove();//接着处理第二个packet
         }
         // TODO: maybe we should flush in the loop above every N packets/bytes?
         // But, how do we determine the right value for N ...
@@ -464,6 +465,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     /**
      * ZKClientHandler is the netty handler that sits in netty upstream last
      * place. It mainly handles read traffic and helps synchronize connection state.
+     * handler处理读请求，同步连接的状态
      */
     private class ZKClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
         AtomicBoolean channelClosed = new AtomicBoolean(false);
@@ -488,18 +490,18 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
-            updateNow();
+            updateNow();//每次读，更新now
             while (buf.isReadable()) {
                 if (incomingBuffer.remaining() > buf.readableBytes()) {
                     int newLimit = incomingBuffer.position()
                             + buf.readableBytes();
                     incomingBuffer.limit(newLimit);
                 }
-                buf.readBytes(incomingBuffer);
-                incomingBuffer.limit(incomingBuffer.capacity());
+                buf.readBytes(incomingBuffer);//读入数据
+                incomingBuffer.limit(incomingBuffer.capacity());//结束读
 
                 if (!incomingBuffer.hasRemaining()) {
-                    incomingBuffer.flip();
+                    incomingBuffer.flip();//完成读操作，提交给上层解析response
                     if (incomingBuffer == lenBuffer) {
                         recvCount.getAndIncrement();
                         readLength();

@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * 
  * This code has been moved out of ClientCnxn so that a Netty implementation can
  * be provided as an alternative to the NIO socket code.
- * Netty实现可以提供一种NIO Socket的可选方案
+ * 部分代码迁移到Clientcnxn中，使得Netty实现可以提供一种NIO Socket的可选方案
  * 
  */
 abstract class ClientCnxnSocket {
@@ -54,22 +54,22 @@ abstract class ClientCnxnSocket {
 
     /**
      * This buffer is only used to read the length of the incoming message.
-     * 只用作读取接收消息的长度
+     *      * 只用作读取接收消息的长度，在长度被读取后，incomingBuffer会被分配，大小是readLength()
      */
-    protected final ByteBuffer lenBuffer = ByteBuffer.allocateDirect(4);
+    protected final ByteBuffer lenBuffer = ByteBuffer.allocateDirect(4);//直接内存映射
 
     /**
      * After the length is read, a new incomingBuffer is allocated in
      * readLength() to receive the full message.
      */
     protected ByteBuffer incomingBuffer = lenBuffer;
-    protected final AtomicLong sentCount = new AtomicLong(0L);
-    protected final AtomicLong recvCount = new AtomicLong(0L);
+    protected final AtomicLong sentCount = new AtomicLong(0L);//发送次数统计，outputQueue中放入数据的次数
+    protected final AtomicLong recvCount = new AtomicLong(0L);//接收次数统计，readLength()调用次数
     protected long lastHeard;
     protected long lastSend;
     protected long now;
-    protected ClientCnxn.SendThread sendThread;
-    protected LinkedBlockingDeque<Packet> outgoingQueue;
+    protected ClientCnxn.SendThread sendThread;//发送线程
+    protected LinkedBlockingDeque<Packet> outgoingQueue;//发送数据队列
     protected ZKClientConfig clientConfig;
     private int packetLen = ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT;//4M
 
@@ -119,7 +119,7 @@ abstract class ClientCnxnSocket {
         this.lastHeard = now;
     }
 
-    void readLength() throws IOException {
+    void readLength() throws IOException {//读取接收消息的长度，然后分配相应长度的Buffer
         int len = incomingBuffer.getInt();
         if (len < 0 || len >= packetLen) {
             throw new IOException("Packet len" + len + " is out of range!");
@@ -153,6 +153,7 @@ abstract class ClientCnxnSocket {
         }
 
         this.sessionId = conRsp.getSessionId();
+        //在ClientCnxnSocket连接创建之后回调sendThread的onConnected方法
         sendThread.onConnected(conRsp.getTimeOut(), this.sessionId,
                 conRsp.getPasswd(), isRO);
     }
@@ -163,22 +164,27 @@ abstract class ClientCnxnSocket {
 
     /**
      * Returns the address to which the socket is connected.
+     * 获取远端server的ip:port
      */
     abstract SocketAddress getRemoteSocketAddress();
 
     /**
      * Returns the address to which the socket is bound.
+     * 获取socket绑定的本地ip:port
      */
     abstract SocketAddress getLocalSocketAddress();
 
     /**
      * Clean up resources for a fresh new socket.
      * It's called before reconnect or close.
+     * 创建新socket之前清理资源，在reconnect或者close之前调用
      */
     abstract void cleanup();
 
     /**
      * new packets are added to outgoingQueue.
+     * outgoingQueue有新数据，通知ClientCnxn
+     *
      */
     abstract void packetAdded();
 
@@ -203,10 +209,14 @@ abstract class ClientCnxnSocket {
      * - read packets into incomingBuffer.
      * - write outgoing queue packets.
      * - update relevant timestamp.
+     * 进行数据传输
+     * -从incomingBuffer中读取数据包
+     * -向outgoing队列中写入
+     * -更新相关的时间戳
      *
      * @param waitTimeOut timeout in blocking wait. Unit in MilliSecond.
      * @param pendingQueue These are the packets that have been sent and
-     *                     are waiting for a response.
+     *                     are waiting for a response.已发送等待响应的packets
      * @param cnxn
      * @throws IOException
      * @throws InterruptedException
@@ -222,6 +232,7 @@ abstract class ClientCnxnSocket {
 
     /**
      * Close this client.
+     * 关闭zk client
      */
     abstract void close();
 
