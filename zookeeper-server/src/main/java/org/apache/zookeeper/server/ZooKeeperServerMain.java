@@ -58,7 +58,7 @@ public class ZooKeeperServerMain {
      *
      * @param args the configfile or the port datadir [ticktime]
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) {//standalone方式运行zookeeper服务端执行入口
         ZooKeeperServerMain main = new ZooKeeperServerMain();
         try {
             main.initializeAndRun(args);
@@ -113,7 +113,7 @@ public class ZooKeeperServerMain {
      * @throws AdminServerException
      */
     public void runFromConfig(ServerConfig config)
-            throws IOException, AdminServerException {
+            throws IOException, AdminServerException {//单节点standalone部署
         LOG.info("Starting server");
         FileTxnSnapLog txnLog = null;
         try {
@@ -121,7 +121,7 @@ public class ZooKeeperServerMain {
             // so rather than spawning another thread, we will just call
             // run() in this thread.
             // create a file logger url from the command line args
-            txnLog = new FileTxnSnapLog(config.dataLogDir, config.dataDir);
+            txnLog = new FileTxnSnapLog(config.dataLogDir, config.dataDir);//根据配置文件指定，创建事务快照日志
             final ZooKeeperServer zkServer = new ZooKeeperServer(txnLog,
                     config.tickTime, config.minSessionTimeout, config.maxSessionTimeout, null);
             txnLog.setServerStats(zkServer.serverStats());
@@ -133,14 +133,17 @@ public class ZooKeeperServerMain {
                     new ZooKeeperServerShutdownHandler(shutdownLatch));
 
             // Start Admin server
-            adminServer = AdminServerFactory.createAdminServer();
+            // 启动
+            adminServer = AdminServerFactory.createAdminServer();//内嵌的admin server用于执行命令(应对网页输入的命令的)，创建JettyAdminServer
             adminServer.setZooKeeperServer(zkServer);
             adminServer.start();
 
             boolean needStartZKServer = true;
             if (config.getClientPortAddress() != null) {
                 cnxnFactory = ServerCnxnFactory.createFactory();
-                cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), false);
+                //如果指定了zookeeper.serverCnxnFactory系统参数，就是用指定的cnxnFactory，如果没有指定，使用默认的NIOServerCnxnFactory
+                cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), false);//maxClientCnxn默认最大是60
+                //QuorumPeerConfig中protected int maxClientCnxns = 60;
                 cnxnFactory.startup(zkServer);
                 // zkServer has been started. So we don't need to start it again in secureCnxnFactory.
                 needStartZKServer = false;
@@ -148,7 +151,7 @@ public class ZooKeeperServerMain {
             if (config.getSecureClientPortAddress() != null) {
                 secureCnxnFactory = ServerCnxnFactory.createFactory();
                 secureCnxnFactory.configure(config.getSecureClientPortAddress(), config.getMaxClientCnxns(), true);
-                secureCnxnFactory.startup(zkServer, needStartZKServer);
+                secureCnxnFactory.startup(zkServer, needStartZKServer);//看上面，如果ZKServer已经启动，这里不需要再次启动，设置为false
             }
 
             containerManager = new ContainerManager(zkServer.getZKDatabase(), zkServer.firstProcessor,
@@ -159,7 +162,7 @@ public class ZooKeeperServerMain {
 
             // Watch status of ZooKeeper server. It will do a graceful shutdown
             // if the server is not running or hits an internal error.
-            shutdownLatch.await();
+            shutdownLatch.await();//等待ZookeeperServer的状态编程Error或者Shutdown
 
             shutdown();
 

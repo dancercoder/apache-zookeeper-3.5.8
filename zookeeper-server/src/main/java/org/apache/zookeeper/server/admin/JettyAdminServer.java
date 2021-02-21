@@ -41,6 +41,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This class encapsulates a Jetty server for running Commands.
+ * JettyAdminServer内部封装了JettyServer用来执行命令
+ * 是Zookeeper的控制台
  *
  * Given the default settings, start a ZooKeeper server and visit
  * http://<hostname>:8080/commands for links to all registered commands. Visiting
@@ -71,7 +73,7 @@ public class JettyAdminServer implements AdminServer {
         this(System.getProperty("zookeeper.admin.serverAddress", DEFAULT_ADDRESS),
              Integer.getInteger("zookeeper.admin.serverPort", DEFAULT_PORT),
              Integer.getInteger("zookeeper.admin.idleTimeout", DEFAULT_IDLE_TIMEOUT),
-             System.getProperty("zookeeper.admin.commandURL", DEFAULT_COMMAND_URL));
+             System.getProperty("zookeeper.admin.commandURL", DEFAULT_COMMAND_URL));//默认情况下commands为前缀使用，可以执行哪些命令呢？
     }
 
     public JettyAdminServer(String address, int port, int timeout, String commandUrl) {
@@ -80,7 +82,7 @@ public class JettyAdminServer implements AdminServer {
         this.commandUrl = commandUrl;
         this.address = address;
 
-        server = new Server();
+        server = new Server();//创建eclipse jetty server
         ServerConnector connector = new ServerConnector(server);
         connector.setHost(address);
         connector.setPort(port);
@@ -146,7 +148,7 @@ public class JettyAdminServer implements AdminServer {
         this.zkServer = zkServer;
     }
 
-    private class CommandServlet extends HttpServlet {
+    private class CommandServlet extends HttpServlet {//JettyServer仅含有的一个servlet，用作命令的服务端
         private static final long serialVersionUID = 1L;
 
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

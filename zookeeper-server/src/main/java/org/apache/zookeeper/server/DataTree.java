@@ -785,10 +785,12 @@ public class DataTree {
 
     public volatile long lastProcessedZxid = 0;
 
+    //执行数据事务
     public ProcessTxnResult processTxn(TxnHeader header, Record txn) {
         return this.processTxn(header, txn, false);
     }
 
+    //内部存在自己调自己
     public ProcessTxnResult processTxn(TxnHeader header, Record txn, boolean isSubTxn)
     {
         ProcessTxnResult rc = new ProcessTxnResult();
@@ -801,7 +803,7 @@ public class DataTree {
             rc.err = 0;
             rc.multiResult = null;
             switch (header.getType()) {
-                case OpCode.create:
+                case OpCode.create://创建新节点
                     CreateTxn createTxn = (CreateTxn) txn;
                     rc.path = createTxn.getPath();
                     createNode(

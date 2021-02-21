@@ -65,6 +65,7 @@ public class PurgeTxnLog {
      * corresponding logs. If logs are rolling or a new snapshot is created
      * during this process, these newest N snapshots or any data logs will be
      * excluded from current purging cycle.
+     * 在清理的过程当中，如果有新的快照被创建，这些快照不算在本次清理周期内
      *
      * @param dataDir the dir that has the logs
      * @param snapDir the dir that has the snapshots
@@ -76,7 +77,7 @@ public class PurgeTxnLog {
             throw new IllegalArgumentException(COUNT_ERR_MSG);
         }
 
-        FileTxnSnapLog txnLog = new FileTxnSnapLog(dataDir, snapDir);
+        FileTxnSnapLog txnLog = new FileTxnSnapLog(dataDir, snapDir);//可以看到数据、快照的存储路径
 
         List<File> snaps = txnLog.findNRecentSnapshots(num);
         int numSnaps = snaps.size();

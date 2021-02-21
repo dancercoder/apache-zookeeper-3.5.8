@@ -61,6 +61,8 @@ import org.slf4j.LoggerFactory;
  * server states that includes the sessions, datatree and the
  * committed logs. It is booted up  after reading the logs
  * and snapshots from the disk.
+ * ZKDatabase在内存中维护了zookeeper服务器的状态，包括会话管理、数据树、提交日志；
+ * ZKDatabase在从硬盘中读取日志和快照数据后启动
  */
 public class ZKDatabase {
 
@@ -70,10 +72,10 @@ public class ZKDatabase {
      * make sure on a clear you take care of
      * all these members.
      */
-    protected DataTree dataTree;
+    protected DataTree dataTree;//保持节点树
     protected ConcurrentHashMap<Long, Integer> sessionsWithTimeouts;
     protected FileTxnSnapLog snapLog;
-    protected long minCommittedLog, maxCommittedLog;
+    protected long minCommittedLog, maxCommittedLog; //最小提交日志、最大提交日志
 
     /**
      * Default value is to use snapshot if txnlog size exceeds 1/3 the size of snapshot

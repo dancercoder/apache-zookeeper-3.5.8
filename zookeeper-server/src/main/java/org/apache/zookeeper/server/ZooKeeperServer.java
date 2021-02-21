@@ -440,6 +440,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         }
     }
 
+    /**
+     * 创建、启动数据存储ZKDatabase
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public void startdata()
     throws IOException, InterruptedException {
         //check to see if zkDb is not null
@@ -513,7 +518,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
      *
      * @param state new server state.
      */
-    protected void setState(State state) {
+    protected void setState(State state) {//修改状态，修改状态时要同时通知注册的handler对当前状态进行处理
         this.state = state;
         // Notify server state changes to the registered shutdown handler, if any.
         if (zkShutdownHandler != null) {

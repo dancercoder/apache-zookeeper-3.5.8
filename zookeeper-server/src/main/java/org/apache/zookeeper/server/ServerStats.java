@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Basic Server Statistics
+ * 服务端统计数据
  */
 public class ServerStats {
     private static final Logger LOG = LoggerFactory.getLogger(ServerStats.class);

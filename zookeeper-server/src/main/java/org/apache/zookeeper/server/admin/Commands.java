@@ -110,7 +110,7 @@ public class Commands {
         return commands.get(cmdName);
     }
 
-    static {
+    static {//管理Zookeeper常用命令注册到列表中
         registerCommand(new CnxnStatResetCommand());
         registerCommand(new ConfCommand());
         registerCommand(new ConsCommand());

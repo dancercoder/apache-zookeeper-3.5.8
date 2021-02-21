@@ -114,24 +114,25 @@ public class QuorumPeerMain {
         }
 
         // Start and schedule the the purge task
+        // 开启清理数据快照和日志的定时任务
         DatadirCleanupManager purgeMgr = new DatadirCleanupManager(config
                 .getDataDir(), config.getDataLogDir(), config
                 .getSnapRetainCount(), config.getPurgeInterval());
         purgeMgr.start();
 
-        if (args.length == 1 && config.isDistributed()) {
+        if (args.length == 1 && config.isDistributed()) {//如果是cluster部署
             runFromConfig(config);
         } else {
             LOG.warn("Either no config or no quorum defined in config, running "
                     + " in standalone mode");
             // there is only server in the quorum -- run as standalone
-            ZooKeeperServerMain.main(args);
+            ZooKeeperServerMain.main(args);//standalone部署
         }
     }
 
     public void runFromConfig(QuorumPeerConfig config)
             throws IOException, AdminServerException
-    {
+    {//集群cluster部署
       try {
           ManagedUtil.registerLog4jMBeans();
       } catch (JMException e) {
